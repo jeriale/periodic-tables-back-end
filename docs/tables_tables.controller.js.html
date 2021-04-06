@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: tables/tables.controller.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: tables/tables.controller.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const service = require("./tables.service");
+const asyncErrorBoundary = require("../errors/asyncErrorBoundary");
+
+/**
+ * Lists all tables by `all`, `free` or `occupied` status.
+ */
+async function list(req, res) {
+  const { status = "free" } = req.query;
+  if (status === "all") {
+    res.json({ data: await service.listAllTables() });
+  }
+  if (status === "occupied") {
+    res.json({ data: await service.listOccupiedTables() });
+  }
+  if (status === "free") {
+    res.json({ data: await service.listFreeTables() });
+  }
+}
+
+/**
+ * Gets a table by `table_id` after validation.
+ */
+function read(req, res) {
+  const { table } = res.locals;
+  res.json({ data: table });
+}
+
+/**
+ * Creates a new table after validation.
+ */
+async function create(req, res) {
+  const { table } = res.locals;
+  const response = await service.createTable(table);
+  res.status(201).json({ data: response[0] });
+}
+
+/**
+ * Updates an existing table by `table_id`.
+ */
+async function update(req, res) {
+  const { table } = res.locals;
+  res.json({ data: await service.updateTable(table) });
+}
+
+/**
+ * Changes the status of a table by assigning a `reservation_id`.
+ */
+async function changeStatus(req, res) {
+  const { table, reservationId } = res.locals;
+  res.json({ data: await service.seatReservation(reservationId, table.table_id) });
+}
+
+/**
+ * Changes the status of a table by assigning a `reservation_id`.
+ */
+async function dismiss(req, res) {
+  const { table } = res.locals;
+  res.json({ data: await service.dismissReservation(table.table_id) });
+}
+
+/**
+ * Changes the status of a table by assigning a `reservation_id`.
+ */
+async function destroy(req, res) {
+  const { tableId } = req.params;
+  res.json({ data: await service.deleteTable(tableId) });
+}
+
+// MIDDLEWARE
+
+/**
+ * Verifies the presence of a `req.body`.
+ */
+ function hasRequestBody(req, res, next) {
+  if (!req.body.data) {
+    return next({
+      status: 400,
+      message: "A 'body' is required."
+    });
+  }
+  next();
+}
+
+/**
+ * Verifies the presence of a `reservation_id`.
+ */
+ function hasReservationId(req, res, next) {
+  const { reservation_id } = req.body.data;
+  if (!reservation_id) {
+    return next({
+      status: 400,
+      message: "A 'reservation_id' is required."
+    });
+  }
+  res.locals.reservationId = reservation_id;
+  next();
+}
+
+/**
+ * Verifies the presence of a `/:tableId` parameter.
+ */
+function hasTableIdParameter(req, res, next) {
+  const { tableId } = req.params;
+  if (!tableId) {
+    return next({
+      status: 400,
+      message: "A '/:tableId' is required."
+    });
+  }
+  res.locals.tableId = tableId;
+  next();
+}
+
+/**
+ * Verifies that a `table_id` exists.
+ */
+async function tableExists(req, res, next) {
+  const { tableId } = req.params;
+  const table = await service.getTableById(tableId);
+  if (!table) {
+    return next({
+      status: 404,
+      message: `The following 'table_id' could not be found: ${tableId}`
+    });
+  }
+  res.locals.table = table;
+  next();
+}
+
+/**
+ * Verifies that a `reservation_id` exists.
+ */
+async function reservationExists(req, res, next) {
+  const { reservationId } = res.locals;
+  const reservation = await service.getReservationSize(reservationId);
+  if (!reservation) {
+    return next({
+      status: 404,
+      message: `Reservation '${reservationId}' does not exist.`
+    });
+  }
+  res.locals.reservation = reservation;
+  next();
+}
+
+/**
+ * Verifies all of the properties are present in the `formData` from the `TableForm` component.
+ */
+function propertiesArePresent(req, res, next) {
+  const { data } = req.body;
+  if (!data) {
+    return next({
+      status: 400,
+      message: "A 'table' is required."
+    });
+  }
+  
+  if (!data.table_name) {
+    return next({
+      status: 400,
+      message: "A 'table_name' is required."
+    });
+  }
+
+  if (!data.capacity) {
+    return next({
+      status: 400,
+      message: "A 'capacity' is required."
+    });
+  }
+  res.locals.table = data;
+  next();
+}
+
+/**
+ * Verifies that `table_name` is at least `2` characters in length.
+ */
+function tableNameIsProperLength(req, res, next) {
+  const { table } = res.locals;
+  if (table.table_name.length &lt; 2) {
+    return next({
+      status: 400,
+      message: "A 'table_name' must be at least 2 characters long."
+    });
+  }
+  next();
+}
+
+/**
+ * Verifies that the table is not occupied by checking for a `reservation_id` value of `!null`.
+ */
+function tableIsNotOccupied(req, res, next) {
+  const { table } = res.locals;
+  if (table.reservation_id) {
+    return next({
+      status: 400,
+      message: "The table is currently occupied. Please make another selection."
+    });
+  }
+  next();
+}
+
+/**
+ * Verifies that the table `capacity` can support the number of `people` in the reservation.
+ */
+function tableHasSufficientCapacity(req, res, next) {
+  const { table, reservation } = res.locals;
+  if (reservation.people > table.capacity) {
+    return next({
+      status: 400,
+      message: "The selected table capacity cannot support the number of people in the reservation."
+    });
+  }
+  next();
+}
+
+function tableIsOccupied(req, res, next) {
+  const { table } = res.locals;
+  if (!table.reservation_id) {
+    return next({
+      status: 400,
+      message: "The selected table is not occupied."
+    });
+  }
+  next()
+}
+
+module.exports = {
+  list: asyncErrorBoundary(list),
+  read: [
+    hasTableIdParameter,
+    asyncErrorBoundary(tableExists),
+    read
+  ],
+  create: [
+    hasRequestBody,
+    propertiesArePresent,
+    tableNameIsProperLength,
+    asyncErrorBoundary(create)
+  ],
+  update: [
+    hasRequestBody,
+    hasTableIdParameter,
+    asyncErrorBoundary(tableExists),
+    propertiesArePresent,
+    tableNameIsProperLength,
+    asyncErrorBoundary(update)
+  ],
+  changeStatus: [
+    hasRequestBody,
+    hasReservationId,
+    hasTableIdParameter,
+    asyncErrorBoundary(tableExists),
+    asyncErrorBoundary(reservationExists),
+    tableIsNotOccupied,
+    tableHasSufficientCapacity,
+    asyncErrorBoundary(changeStatus)
+  ],
+  dismiss: [
+    asyncErrorBoundary(tableExists),
+    tableIsOccupied,
+    asyncErrorBoundary(dismiss)
+  ],
+  destroy: [
+    asyncErrorBoundary(tableExists),
+    tableIsNotOccupied,
+    destroy
+  ]
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Global</h3><ul><li><a href="global.html#changeStatus">changeStatus</a></li><li><a href="global.html#create">create</a></li><li><a href="global.html#createReservation">createReservation</a></li><li><a href="global.html#createTable">createTable</a></li><li><a href="global.html#dateHasNotPassed">dateHasNotPassed</a></li><li><a href="global.html#dateIsNotOnTuesday">dateIsNotOnTuesday</a></li><li><a href="global.html#deleteTable">deleteTable</a></li><li><a href="global.html#destroy">destroy</a></li><li><a href="global.html#dismiss">dismiss</a></li><li><a href="global.html#dismissReservation">dismissReservation</a></li><li><a href="global.html#errorHandler">errorHandler</a></li><li><a href="global.html#getReservationById">getReservationById</a></li><li><a href="global.html#getReservationSize">getReservationSize</a></li><li><a href="global.html#getTableById">getTableById</a></li><li><a href="global.html#hasRequestBody">hasRequestBody</a></li><li><a href="global.html#hasReservationId">hasReservationId</a></li><li><a href="global.html#hasReservationIdParameter">hasReservationIdParameter</a></li><li><a href="global.html#hasTableIdParameter">hasTableIdParameter</a></li><li><a href="global.html#hasValidDate">hasValidDate</a></li><li><a href="global.html#hasValidTime">hasValidTime</a></li><li><a href="global.html#list">list</a></li><li><a href="global.html#listAllTables">listAllTables</a></li><li><a href="global.html#listByDate">listByDate</a></li><li><a href="global.html#listFreeTables">listFreeTables</a></li><li><a href="global.html#listOccupiedTables">listOccupiedTables</a></li><li><a href="global.html#listReservations">listReservations</a></li><li><a href="global.html#notFound">notFound</a></li><li><a href="global.html#numberOfPeopleIsNumber">numberOfPeopleIsNumber</a></li><li><a href="global.html#propertiesArePresent">propertiesArePresent</a></li><li><a href="global.html#read">read</a></li><li><a href="global.html#reservationExists">reservationExists</a></li><li><a href="global.html#router">router</a></li><li><a href="global.html#seatReservation">seatReservation</a></li><li><a href="global.html#tableExists">tableExists</a></li><li><a href="global.html#tableHasSufficientCapacity">tableHasSufficientCapacity</a></li><li><a href="global.html#tableIsNotOccupied">tableIsNotOccupied</a></li><li><a href="global.html#tableNameIsProperLength">tableNameIsProperLength</a></li><li><a href="global.html#timeIsAfterCurrentTime">timeIsAfterCurrentTime</a></li><li><a href="global.html#timeIsWhileOpen">timeIsWhileOpen</a></li><li><a href="global.html#update">update</a></li><li><a href="global.html#updateTable">updateTable</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 3.6.6</a> on Tue Apr 06 2021 10:57:02 GMT-0400 (Eastern Daylight Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
