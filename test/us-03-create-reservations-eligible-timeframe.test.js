@@ -3,6 +3,8 @@ const request = require("supertest");
 const app = require("../src/app");
 const knex = require("../src/db/connection");
 
+jest.setTimeout(30000);
+
 describe("US-03 - Create reservations eligible timeframe", () => {
   beforeAll(() => {
     return knex.migrate
