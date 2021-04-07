@@ -7,7 +7,9 @@ const listReservations = (date) =>
     knex("reservations")
         .select("*")
         .where({ "reservation_date": date })
-        .orderBy("reservation_time");
+        .orderBy("reservation_time")
+        .orderBy("status", "desc")
+        .orderBy("updated_at");
 
 /**
  * Gets all reservations where `reservation_date` is equal to the `date` search query parameter.
@@ -31,6 +33,7 @@ const updateReservation = (data, reservationId) =>
     knex("reservations")
         .where({ "reservation_id": reservationId })
         .update({
+            "status": data.status,
             "first_name": data.first_name,
             "last_name": data.last_name,
             "mobile_number": data.mobile_number,
@@ -39,10 +42,20 @@ const updateReservation = (data, reservationId) =>
             "people": data.people
         });
 
-const deleteReservation = (reservationId) =>
-    knex("reservations")
-        .where({ "reservation_id": reservationId })
-        .del();
+const deleteReservation = (reservationId) => {
+    return knex.transaction((trx) => {
+        return trx("reservations")
+            .where({ "reservation_id": reservationId })
+            .del()
+            .then(() => {
+                return trx("tables")
+                    .where({ "reservation_id": reservationId })
+                    .update({ "reservation_id": null });
+            })
+            .catch(console.error);
+    })
+    .catch(console.error);
+}
 
 module.exports = {
     listReservations,
