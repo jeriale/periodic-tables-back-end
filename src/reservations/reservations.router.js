@@ -8,7 +8,7 @@ const controller = require("./reservations.controller");
 const methodNotAllowed = require("../errors/asyncErrorBoundary");
 
 router.route("/")
-    .get(controller.listByDate)
+    .get(controller.list)
     .post(controller.create)
     .all(methodNotAllowed);
 
@@ -18,7 +18,12 @@ router.route("/:reservationId")
     .all(methodNotAllowed);
 
 router.route("/:reservationId/edit")
+    .delete(controller.destroy)
     .put(controller.update)
+    .all(methodNotAllowed);
+
+router.route("/:reservationId/status")
+    .put(controller.finish)
     .all(methodNotAllowed);
 
 module.exports = router;

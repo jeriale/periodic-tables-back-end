@@ -3,10 +3,24 @@ const knex = require("../db/connection");
 /**
  * Gets all reservations where `reservation_date` is equal to the `date` search query parameter.
  */
-const listReservations = (date) =>
+const listAllReservations = (date) =>
     knex("reservations")
         .select("*")
-        .where({ "reservation_date": date })
+        .where({ reservation_date: date })
+        .whereIn("status", ["booked", "seated"])
+        .orderBy("reservation_time")
+        .orderBy("status", "desc")
+        .orderBy("updated_at");
+
+/**
+ * Gets all reservations where `reservation_date` is equal to the `date` search query parameter.
+ */
+const listReservationsByPhase = (date, phase) =>
+    knex("reservations")
+        .select("*")
+        .where({
+            reservation_date: date,
+            status: phase })
         .orderBy("reservation_time")
         .orderBy("status", "desc")
         .orderBy("updated_at");
@@ -16,7 +30,7 @@ const listReservations = (date) =>
  */
 const getReservationById = (reservationId) =>
     knex("reservations")
-        .where({ "reservation_id": reservationId })
+        .where({ reservation_id: reservationId })
         .first();
 
 /**
@@ -33,24 +47,39 @@ const updateReservation = (data, reservationId) =>
     knex("reservations")
         .where({ "reservation_id": reservationId })
         .update({
-            "status": data.status,
-            "first_name": data.first_name,
-            "last_name": data.last_name,
-            "mobile_number": data.mobile_number,
-            "reservation_date": data.reservation_date,
-            "reservation_time": data.reservation_time,
-            "people": data.people
+            status: data.status,
+            first_name: data.first_name,
+            last_name: data.last_name,
+            mobile_number: data.mobile_number,
+            reservation_date: data.reservation_date,
+            reservation_time: data.reservation_time,
+            people: data.people
         });
 
 const deleteReservation = (reservationId) => {
     return knex.transaction((trx) => {
         return trx("reservations")
-            .where({ "reservation_id": reservationId })
+            .where({ reservation_id: reservationId })
             .del()
             .then(() => {
+                return trx(tables)
+                    .where({ reservation_id: reservationId })
+                    .update({ reservation_id: null });
+            })
+            .catch(console.error);
+    })
+    .catch(console.error);
+}
+
+const finishReservation = (reservationId) => {
+    return knex.transaction((trx) => {
+        return trx("reservations")
+            .where({ reservation_id: reservationId })
+            .update({ status: "finished" })
+            .then(() => {
                 return trx("tables")
-                    .where({ "reservation_id": reservationId })
-                    .update({ "reservation_id": null });
+                    .where({ reservation_id: reservationId })
+                    .update({ reservation_id: null });
             })
             .catch(console.error);
     })
@@ -58,9 +87,11 @@ const deleteReservation = (reservationId) => {
 }
 
 module.exports = {
-    listReservations,
+    listAllReservations,
+    listReservationsByPhase,
     getReservationById,
     createReservation,
     updateReservation,
-    deleteReservation
+    deleteReservation,
+    finishReservation
 }
