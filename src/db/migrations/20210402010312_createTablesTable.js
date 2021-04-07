@@ -1,9 +1,9 @@
 exports.up = function (knex) {
     return knex.schema.createTable("tables", (table) => {
       table.increments("table_id").primary();
-      table.string("table_name", null).notNullable();
-      table.integer("capacity", null).notNullable();
-      table.integer("reservation_id", null);
+      table.string("table_name").notNullable();
+      table.integer("capacity").notNullable();
+      table.integer("reservation_id");
       table.foreign("reservation_id").references("reservation_id").inTable("reservations");
       table.timestamps(true, true);
     });
