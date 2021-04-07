@@ -42,7 +42,7 @@ const createTable = (data) =>
  */
 const getTableById = (tableId) =>
     knex("tables")
-        .where({ "table_id": tableId })
+        .where({ table_id: tableId })
         .first();
 
 /**
@@ -52,10 +52,10 @@ const getTableById = (tableId) =>
  */
  const updateTable = (table) => 
     knex("tables")
-        .where({ "table_id": table.table_id })
+        .where({ table_id: table.table_id })
         .update({
-            "table_name": table.table_name,
-            "capacity": table.capacity
+            table_name: table.table_name,
+            capacity: table.capacity
         });
 
 /**
@@ -65,7 +65,7 @@ const getTableById = (tableId) =>
  */
  const deleteTable = (tableId) =>
     knex("tables")
-        .where({ "table_id": tableId })
+        .where({ table_id: tableId })
         .del();
 
 /**
@@ -77,7 +77,7 @@ const getTableById = (tableId) =>
  */
 const getReservationSize = (reservationId) =>
     knex("reservations")
-        .where({ "reservation_id": reservationId })
+        .where({ reservation_id: reservationId })
         .select("people")
         .first();
 
@@ -88,15 +88,18 @@ const getReservationSize = (reservationId) =>
  * @param {integer} tableId
  *  the `table_id` to be found in the database.
  */
-const seatReservation = (reservationId, tableId) => {
+const assignReservation = (reservationId, tableId) => {
     return knex.transaction((trx) => {
         return trx("tables")
-            .where({ "table_id": tableId })
-            .update({ "reservation_id": reservationId })
-            .then(() => {
+            .where({ table_id: tableId })
+            .update({ reservation_id: reservationId }, ["table_name"])
+            .then((tables) => {
                 return trx("reservations")
-                    .where({ "reservation_id": reservationId })
-                    .update({ "status": "seated" });
+                    .where({ reservation_id: reservationId })
+                    .update({
+                        status: "seated",
+                        current_table: tables[0].table_name
+                    });
             })
             .catch(console.error);
     })
@@ -108,10 +111,23 @@ const seatReservation = (reservationId, tableId) => {
  * @param {integer} tableId
  *  the `table_id` to be found in the database. 
  */
-const dismissReservation = (tableId) =>
-    knex("tables")
-        .where({ "table_id": tableId })
-        .update({ "reservation_id": null });
+const dismissTable = (tableId, reservationId) => {
+    return knex.transaction((trx) => {
+        return trx("tables")
+            .where({ table_id: tableId })
+            .update({ reservation_id: null })
+            .then(() => {
+                return trx("reservations")
+                    .where({ reservation_id: reservationId })
+                    .update({
+                        status: "finished",
+                        current_table: null         
+                    });
+            })
+            .catch(console.error);
+    })
+    .catch(console.error);
+}
 
 module.exports = {
     listAllTables,
@@ -121,7 +137,7 @@ module.exports = {
     getTableById,
     updateTable,
     getReservationSize,
-    seatReservation,
-    dismissReservation,
+    assignReservation,
+    dismissTable,
     deleteTable
 }

@@ -45,9 +45,9 @@ async function update(req, res) {
 /**
  * Changes the status of a table by assigning a `reservation_id`.
  */
-async function changeStatus(req, res) {
+async function assign(req, res) {
   const { table, reservationId } = res.locals;
-  res.json({ data: await service.seatReservation(reservationId, table.table_id) });
+  res.json({ data: await service.assignReservation(reservationId, table.table_id) });
 }
 
 /**
@@ -55,7 +55,8 @@ async function changeStatus(req, res) {
  */
 async function dismiss(req, res) {
   const { table } = res.locals;
-  res.json({ data: await service.dismissReservation(table.table_id) });
+  const { reservationId } = req.body.data;
+  res.json({ data: await service.dismissTable(table.table_id, reservationId) });
 }
 
 /**
@@ -222,7 +223,7 @@ function tableIsOccupied(req, res, next) {
       message: "The selected table is not occupied."
     });
   }
-  next()
+  next();
 }
 
 module.exports = {
@@ -246,7 +247,7 @@ module.exports = {
     tableNameIsProperLength,
     asyncErrorBoundary(update)
   ],
-  changeStatus: [
+  assign: [
     hasRequestBody,
     hasReservationId,
     hasTableIdParameter,
@@ -254,9 +255,11 @@ module.exports = {
     asyncErrorBoundary(reservationExists),
     tableIsNotOccupied,
     tableHasSufficientCapacity,
-    asyncErrorBoundary(changeStatus)
+    asyncErrorBoundary(assign)
   ],
   dismiss: [
+    hasRequestBody,
+    hasTableIdParameter,
     asyncErrorBoundary(tableExists),
     tableIsOccupied,
     asyncErrorBoundary(dismiss)

@@ -23,8 +23,8 @@ router.route("/:tableId/edit")
   .all(methodNotAllowed);
 
 router.route("/:tableId/seat")
+  .put(controller.assign)
   .delete(controller.dismiss)
-  .put(controller.changeStatus)
   .all(methodNotAllowed);
  
  module.exports = router;

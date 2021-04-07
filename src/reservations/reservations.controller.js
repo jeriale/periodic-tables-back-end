@@ -9,11 +9,14 @@ const { DateTime, Settings } = require("luxon");
 Settings.defaultZoneName = "America/New_York";
 
 /**
- * Lists all reservations by date query parameter.
+ * Lists all reservations by search query parameter.
  */
-async function listByDate(req, res) {
-  const { date } = req.query;
-  res.json({ data: await service.listReservations(date) });
+async function list(req, res) {
+  const { date, phase } = req.query;
+  if (phase === "all") res.json({ data: await service.listAllReservations(date) });
+  if (phase === "booked" || phase === "seated" || phase === "finished") {
+    res.json({ data: await service.listReservationsByPhase(date, phase) });
+  }
 }
 
 /**
@@ -48,6 +51,12 @@ async function update(req, res) {
 async function destroy(req, res) {
   const { reservationId } = req.params;
   res.json({ data: await service.deleteReservation(reservationId) });
+}
+
+async function finish(req, res) {
+  const { data } = req.body;
+  const { reservationId } = req.params;
+  res.json({ data: await service.finishReservation(reservationId) });
 }
 
 // MIDDLEWARE FUNCTIONS
@@ -255,7 +264,7 @@ function timeIsWhileOpen(req, res, next) {
 }
 
 module.exports = {
-  listByDate: asyncErrorBoundary(listByDate),
+  list: asyncErrorBoundary(list),
   read: [
     hasReservationIdParameter,
     asyncErrorBoundary(reservationExists),
@@ -287,5 +296,8 @@ module.exports = {
     hasReservationIdParameter,
     asyncErrorBoundary(reservationExists),
     destroy
+  ],
+  finish: [
+    asyncErrorBoundary(finish)
   ]
 };
