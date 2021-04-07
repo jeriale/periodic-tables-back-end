@@ -3,7 +3,7 @@ const { DateTime } = require("luxon");
 const dateToday = 
   DateTime.local().toFormat("EEEE") === "Tuesday"
     ? DateTime.local().plus({ days: 1 }).toISODate()
-    : DateTime.local.toISODate();
+    : DateTime.local().toISODate();
 
 exports.seed = function (knex) {
   return knex
@@ -12,6 +12,7 @@ exports.seed = function (knex) {
       return knex("reservations")
         .insert([
           {
+            status: "booked",
             first_name: "Rick",
             last_name: "Sanchez",
             mobile_number: "202-555-0164",
@@ -22,6 +23,7 @@ exports.seed = function (knex) {
             updated_at: "2020-12-10T08:30:32.326Z"
           },
           {
+            status: "booked",
             first_name: "Frank",
             last_name: "Palicky",
             mobile_number: "202-555-0153",
@@ -32,6 +34,7 @@ exports.seed = function (knex) {
             updated_at: "2020-12-10T08:31:32.326Z"
           },
           {
+            status: "booked",
             first_name: "Bird",
             last_name: "Person",
             mobile_number: "808-555-0141",
@@ -42,6 +45,7 @@ exports.seed = function (knex) {
             updated_at: "2020-12-10T08:31:32.326Z"
           },
           {
+            status: "booked",
             first_name: "Tiger",
             last_name: "Lion",
             mobile_number: "808-555-0140",
@@ -52,6 +56,7 @@ exports.seed = function (knex) {
             updated_at: "2020-12-10T08:31:32.326Z"
           },
           {
+            status: "booked",
             first_name: "Anthony",
             last_name: "Charboneau",
             mobile_number: "620-646-8897",

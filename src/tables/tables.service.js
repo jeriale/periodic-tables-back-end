@@ -88,10 +88,20 @@ const getReservationSize = (reservationId) =>
  * @param {integer} tableId
  *  the `table_id` to be found in the database.
  */
-const seatReservation = (reservationId, tableId) =>
-    knex("tables")
-        .where({ "table_id": tableId })
-        .update({ "reservation_id": reservationId });
+const seatReservation = (reservationId, tableId) => {
+    knex.transaction((trx) => {
+        return trx("tables")
+            .where({ "table_id": tableId })
+            .update({ "reservation_id": reservationId })
+            .then(() => {
+                return trx("reservations")
+                    .where({ "reservation_id": reservationId })
+                    .update({ "status": "seated" });
+            })
+            .catch(console.error);
+    })
+    .catch(console.error);
+}
 
 /**
  * Removes the `reservation_id` from the `table` record.
