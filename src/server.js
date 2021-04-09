@@ -7,7 +7,16 @@ knex.migrate
   .latest()
   .then((migrations) => {
     console.log("Migrated: ", migrations);
-    app.listen(PORT, listener)
+    knex.seed
+      .run()
+      .then((seeds) => {
+        console.log("Seeded: ", seeds);
+        app.listen(PORT, listener)
+      })
+      .catch((error) => {
+        console.error(error);
+        knex.destoy();
+      });
   })
   .catch((error) => {
     console.error(error);
