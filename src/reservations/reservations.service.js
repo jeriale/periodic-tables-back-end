@@ -73,7 +73,10 @@ const finishReservation = (reservationId) => {
     return knex.transaction((trx) => {
         return trx("reservations")
             .where({ reservation_id: reservationId })
-            .update({ status: "finished" })
+            .update({
+                status: "finished",
+                current_table: null
+            })
             .then(() => {
                 return trx("tables")
                     .where({ reservation_id: reservationId })
