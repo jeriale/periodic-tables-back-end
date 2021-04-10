@@ -55,8 +55,8 @@ async function assign(req, res) {
  */
 async function dismiss(req, res) {
   const { table } = res.locals;
-  const { reservationId } = req.body.data;
-  res.json({ data: await service.dismissTable(table.table_id, reservationId) });
+  const { reservation_id } = req.body.data;
+  res.json({ data: await service.dismissTable(table.table_id, reservation_id) });
 }
 
 /**
@@ -68,19 +68,6 @@ async function destroy(req, res) {
 }
 
 // MIDDLEWARE
-
-/**
- * Verifies the presence of a `req.body`.
- */
- function hasRequestBody(req, res, next) {
-  if (!req.body.data) {
-    return next({
-      status: 400,
-      message: "A 'body' is required."
-    });
-  }
-  next();
-}
 
 /**
  * Verifies the presence of a `reservation_id`.
@@ -234,13 +221,11 @@ module.exports = {
     read
   ],
   create: [
-    hasRequestBody,
     propertiesArePresent,
     tableNameIsProperLength,
     asyncErrorBoundary(create)
   ],
   update: [
-    hasRequestBody,
     hasTableIdParameter,
     asyncErrorBoundary(tableExists),
     propertiesArePresent,
@@ -248,7 +233,6 @@ module.exports = {
     asyncErrorBoundary(update)
   ],
   assign: [
-    hasRequestBody,
     hasReservationId,
     hasTableIdParameter,
     asyncErrorBoundary(tableExists),
@@ -258,7 +242,6 @@ module.exports = {
     asyncErrorBoundary(assign)
   ],
   dismiss: [
-    hasRequestBody,
     hasTableIdParameter,
     asyncErrorBoundary(tableExists),
     tableIsOccupied,

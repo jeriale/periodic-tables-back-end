@@ -8,9 +8,7 @@ const listAllReservations = (date) =>
         .select("*")
         .where({ reservation_date: date })
         .whereIn("status", ["booked", "seated"])
-        .orderBy("reservation_time")
-        .orderBy("status", "desc")
-        .orderBy("updated_at");
+        .orderBy("reservation_time");
 
 /**
  * Gets all reservations where `reservation_date` is equal to the `date` search query parameter.

@@ -3,14 +3,23 @@ const { PORT = 5000 } = process.env;
 const app = require("./app");
 const knex = require("./db/connection");
 
-knex.seed
-  .run()
-  .then((seeds) => {
-    console.log("Seeded: ", seeds);
-    app.listen(PORT, listener)
+knex.migrate
+  .latest()
+  .then((migrations) => {
+    console.log("Migrated: ", migrations);
+    knex.seed
+      .run()
+      .then((seeds) => {
+        console.log("Seeded: ", seeds);
+        app.listen(PORT, listener)
+      })
+      .catch((error) => {
+        console.error(error);
+        knex.destoy();
+      });
   })
-  .catch(() => {
-    console.error();
+  .catch((error) => {
+    console.error(error);
     knex.destroy();
   });
 
